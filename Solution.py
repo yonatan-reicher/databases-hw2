@@ -14,8 +14,44 @@ from Business.Apartment import Apartment
 # ---------------------------------- CRUD API: ----------------------------------
 
 def create_tables():
-    # TODO: implement
-    pass
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        conn.execute("CREATE TABLE Owner(id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+        conn.execute("CREATE TABLE Customer(id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+        conn.execute("""
+            CREATE TABLE Apartment(
+                id          INTEGER PRIMARY KEY, 
+                address     TEXT NOT NULL,
+                city        TEXT NOT NULL,
+                country     TEXT NOT NULL,
+                size        INTEGER NOT NULL,
+                CONSTRAINT positive_size CHECK (size > 0)
+                CONSTRAINT unique_address UNIQUE (address, city, country)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE Owns(
+                owner_id        INTEGER REFERENCES Owner(id) ON DELETE CASCADE,
+                apartment_id    INTEGER REFERENCES Apartment(id) ON DELETE CASCADE,
+                PRIMARY KEY(apartment_id)
+            )
+        """)
+    except DatabaseException.ConnectionInvalid as e:
+        print(e)
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        print(e)
+    except DatabaseException.CHECK_VIOLATION as e:
+        print(e)
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        print(e)
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        print(e)
+    except Exception as e:
+        print(e)
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn: conn.close()
 
 
 def clear_tables():
