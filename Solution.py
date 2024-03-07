@@ -65,17 +65,91 @@ def drop_tables():
 
 
 def add_owner(owner: Owner) -> ReturnValue:
-    # TODO: implement
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        owner_name = conn.execute("SELECT name FROM owner WHERE id = %s", (owner_id,))
+        if owner_name is not None:
+            return Owner(owner_id, owner_name)
+        else:
+            # TODO: Check if bad_owner is an actual func written by the course staff
+            return Owner.bad_owner()
+    except DatabaseException.ConnectionInvalid as e:
+        print(e)
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        print(e)
+    except DatabaseException.CHECK_VIOLATION as e:
+        print(e)
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        print(e)
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        print(e)
+    except Exception as e:
+        print(e)
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn: conn.close()
     pass
 
 
 def get_owner(owner_id: int) -> Owner:
-    # TODO: implement
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        owner_name = conn.execute("SELECT name FROM owner WHERE id = %s", (owner_id,))
+        if owner_name is not None:
+            return Owner(owner_id, owner_name)
+        else:
+            # TODO: Check if bad_owner is an actual func written by the course staff
+            return Owner.bad_owner()
+    except DatabaseException.ConnectionInvalid as e:
+        print(e)
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        print(e)
+    except DatabaseException.CHECK_VIOLATION as e:
+        print(e)
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        print(e)
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        print(e)
+    except Exception as e:
+        print(e)
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn: conn.close()
     pass
 
 
 def delete_owner(owner_id: int) -> ReturnValue:
-    # TODO: implement
+    #for delete funcs, params value can and should be tested via python.
+    if not isinstance(owner_id, int):
+        return ReturnValue.BAD_PARAMS
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        rows_effected = conn.execute("DELETE FROM owner WHERE id = %s", (owner_id,))
+        if rows_effected is not 0:
+            # Owner exists and deleted one or more times
+            return ReturnValue.OK
+        else:
+            # Owner does not exist
+            return ReturnValue.NOT_EXISTS
+    except DatabaseException.ConnectionInvalid as e:
+        print(e)
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        print(e)
+    except DatabaseException.CHECK_VIOLATION as e:
+        print(e)
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        print(e)
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        print(e)
+    except Exception as e:
+        print(e)
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn: conn.close()
+        return ReturnValue.ERROR
     pass
 
 
@@ -101,6 +175,7 @@ def add_customer(customer: Customer) -> ReturnValue:
 
 def get_customer(customer_id: int) -> Customer:
     # TODO: implement
+
     pass
 
 
