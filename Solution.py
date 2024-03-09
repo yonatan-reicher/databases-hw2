@@ -526,12 +526,69 @@ def customer_updated_review(customer_id: int, apartment_id: int, update_date: da
 
 
 def owner_owns_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
-    # TODO: implement
+    if not isinstance(owner_id, int) or not isinstance(apartment_id, int):
+        return ReturnValue.BAD_PARAMS
+    conn = None
+    return_value = ReturnValue.OK
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("INSERT INTO Owns(owner_id, apartment_id) VALUES({ownerid}, {apartmentid})").format(
+            ownerid=sql.Literal(owner_id),
+            apartmentid=sql.Literal(apartment_id))
+        rows_effected, _ = conn.execute(query)
+        if rows_effected == 1:
+            return ReturnValue.OK
+        if rows_effected == 0:
+            return ReturnValue.ALREADY_EXISTS
+    except DatabaseException.ConnectionInvalid as e:
+        return_value = ReturnValue.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.CHECK_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        return_value = ReturnValue.ALREADY_EXISTS
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn:
+            conn.close()
+        return return_value
     pass
 
-
 def owner_drops_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
-    # TODO: implement
+    if not isinstance(owner_id, int) or not isinstance(apartment_id, int):
+        return ReturnValue.BAD_PARAMS
+    conn = None
+    return_value = ReturnValue.OK
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("DELETE FROM Owns "
+                        "WHERE owner_id = {ownerid} "
+                        "AND apartment_id = {apartmentid})").format(
+                        ownerid=sql.Literal(owner_id),
+                        apartmentid=sql.Literal(apartment_id))
+        rows_effected, _ = conn.execute(query)
+        if rows_effected != 0:
+            return ReturnValue.OK
+        else:
+            return ReturnValue.NOT_EXISTS
+    except DatabaseException.ConnectionInvalid as e:
+        return_value = ReturnValue.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.CHECK_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        return_value = ReturnValue.NOT_EXISTS
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        return_value = ReturnValue.NOT_EXISTS
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn:
+            conn.close()
+        return return_value
     pass
 
 
