@@ -71,6 +71,14 @@ def create_tables():
                         CONSTRAINT unique_review UNIQUE (customer_id, apartment_id)
                     )
                 """)
+        conn.execute("""
+                           CREATE MATERIALIZED VIEW OAP AS
+                               SELECT A.owner_id, B.name, A.apartment_id, C.address, C.city, C.country, C.size
+                               FROM Owns A, Owner B, C Apartment
+                               WHERE A.owner_id = B.id AND A.apartment_id = C.id
+                           )
+                       """)
+
     except DatabaseException.ConnectionInvalid as e:
         print(e)
     except DatabaseException.NOT_NULL_VIOLATION as e:
@@ -591,14 +599,49 @@ def owner_drops_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
         return return_value
     pass
 
-
+#TODO: check that the view used here is indeed working
 def get_apartment_owner(apartment_id: int) -> Owner:
-    # TODO: implement
+    if not isinstance(apartment_id, int):
+        return Owner.bad_owner()
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("SELECT owner_id, name FROM OAP WHERE apartment_id = {apartmentid}").format(
+                                                                apartmentid=sql.Literal(apartment_id))
+        rows_effected, result = conn.execute(query)
+        if rows_effected == 0:
+            return Owner.bad_owner()
+        if result is not None:
+            return Owner(result[0], result[1])
+        else:
+            return Owner.bad_owner()
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn:
+            conn.close()
     pass
 
-
+#TODO: check that the view used here is indeed working
 def get_owner_apartments(owner_id: int) -> List[Apartment]:
-    # TODO: implement
+    query_result = []
+    if not isinstance(owner_id, int):
+        return query_result
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("SELECT owner_id, apartment_id, address, city, country, size FROM OAP WHERE owner_id = {ownerid}").format(
+            ownerid=sql.Literal(owner_id))
+        rows_effected, result = conn.execute(query)
+        if rows_effected == 0:
+            return query_result
+        if result is not None:
+            for index in result:
+                query_result.append(Apartment(index[1], index[2], index[3], index[4], index[5]))
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn:
+            conn.close()
+        return query_result
     pass
 
 
