@@ -60,6 +60,16 @@ def create_tables():
                         CONSTRAINT legal_dates CHECK (start_date <= end_date) NOT VALID
                     )
                 """)
+        conn.execute("""
+                    CREATE TABLE Review(
+                        customer_id     INTEGER REFERENCES Customer(id) ON DELETE CASCADE,
+                        apartment_id    INTEGER REFERENCES Apartment(id) ON DELETE CASCADE,
+                        date            DATE NOT NULL,      
+                        rating          INTEGER NOT NULL,
+                        review_text     TEXT NOT NULL,
+                        CONSTRAINT legal_rating CHECK (rating >= 1 and rating <= 10) NOT VALID
+                    )
+                """)
     except DatabaseException.ConnectionInvalid as e:
         print(e)
     except DatabaseException.NOT_NULL_VIOLATION as e:
@@ -428,10 +438,11 @@ def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_da
 def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date: date, rating: int,
                                 review_text: str) -> ReturnValue:
     # TODO: implement
+
     pass
 
 
-def customer_updated_review(customer_id: int, apartmetn_id: int, update_date: date, new_rating: int,
+def customer_updated_review(customer_id: int, apartment_id: int, update_date: date, new_rating: int,
                             new_text: str) -> ReturnValue:
     # TODO: implement
     pass
