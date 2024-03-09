@@ -68,6 +68,7 @@ def create_tables():
                         rating          INTEGER NOT NULL,
                         review_text     TEXT NOT NULL,
                         CONSTRAINT legal_rating CHECK (rating >= 1 and rating <= 10) NOT VALID
+                        CONSTRAINT unique_review UNIQUE (customer_id, apartment_id)
                     )
                 """)
     except DatabaseException.ConnectionInvalid as e:
@@ -154,7 +155,7 @@ def delete_owner(owner_id: int) -> ReturnValue:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM owner WHERE id = {ownerid}").format(ownerid=sql.Literal(owner_id))
         rows_effected = conn.execute(query)
-        if rows_effected is not 0:
+        if rows_effected != 0:
             # Owner exists and deleted one or more times
             return ReturnValue.OK
         else:
@@ -221,7 +222,7 @@ def get_apartment(apartment_id: int) -> Apartment:
         query = sql.SQL("SELECT id, address, city, country, size FROM Apartment WHERE id = {apartmentid}").format(
             apartmentid=sql.Literal(apartment_id))
         rows_affected, result = conn.execute(query)
-        if rows_affected is not 0:
+        if rows_affected != 0:
             return Apartment(result[0], result[1], result[2], result[3], result[4])
         else:
             return Apartment.bad_apartment()
@@ -241,7 +242,7 @@ def delete_apartment(apartment_id: int) -> ReturnValue:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM Apartment WHERE id = {apartmentid}").format(ownerid=sql.Literal(apartment_id))
         rows_effected = conn.execute(query)
-        if rows_effected is not 0:
+        if rows_effected != 0:
             # Apartment exists and deleted one or more times
             return ReturnValue.OK
         else:
@@ -328,7 +329,7 @@ def delete_customer(customer_id: int) -> ReturnValue:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM Customer WHERE id = {customerid}").format(customerid=sql.Literal(customer_id))
         rows_effected = conn.execute(query)
-        if rows_effected is not 0:
+        if rows_effected != 0:
             # Customer exists and deleted one or more times
             return ReturnValue.OK
         else:
@@ -344,8 +345,6 @@ def delete_customer(customer_id: int) -> ReturnValue:
         return_value = ReturnValue.BAD_PARAMS
     except DatabaseException.FOREIGN_KEY_VIOLATION as e:
         return_value = ReturnValue.BAD_PARAMS
-    except Exception as e:
-        print(e)
     finally:
         # will happen any way after try termination or exception handling
         if conn:
@@ -437,14 +436,92 @@ def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_da
 
 def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date: date, rating: int,
                                 review_text: str) -> ReturnValue:
-    # TODO: implement
-
+    if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(review_date, date)
+            or not isinstance(rating, int) or not isinstance(review_text, str)):
+        return ReturnValue.BAD_PARAMS
+    conn = None
+    return_value = ReturnValue.OK
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("INSERT INTO Review(costumer_id, apartment_id, date, rading, review_text) "
+                        "SELECT({customerid}, {apartmentid}, {reviewdate}, {rating}, {reviewtext})"
+                        "WHERE EXISTS("
+                        "SELECT 1 FROM Reservasion AS selection "
+                        "WHERE selection.apartment_id = {apartmentid}"
+                        "AND selection.customer_id = {customerid}"
+                        "AND selection.end_date <= {reviewdate}").format(
+            customerid=sql.Literal(customer_id),
+            apartmentid=sql.Literal(apartment_id),
+            reviewdate=sql.Literal(review_date),
+        )
+        rows_effected, _ = conn.execute(query)
+        if rows_effected == 1:
+            return ReturnValue.OK
+        if rows_effected == 0:
+            return ReturnValue.ALREADY_EXISTS
+    except DatabaseException.ConnectionInvalid as e:
+        return_value = ReturnValue.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.CHECK_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        return_value = ReturnValue.ALREADY_EXISTS
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        return_value = ReturnValue.NOT_EXISTS
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn:
+            conn.close()
+        return return_value
     pass
 
 
 def customer_updated_review(customer_id: int, apartment_id: int, update_date: date, new_rating: int,
                             new_text: str) -> ReturnValue:
-    # TODO: implement
+
+    if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(update_date, date)
+            or not isinstance(new_rating, int) or not isinstance(new_text, str)):
+        return ReturnValue.BAD_PARAMS
+    conn = None
+    return_value = ReturnValue.OK
+    #TODO: USE VIEW HERE
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("UPDATE Review "
+                        "SET date = {reviewdate}, rating = {reviewrating}, review_text = {reviewtext}"
+                        "WHERE("
+                            "customer_id = {customerid}"
+                            "AND apartment_id = {apartmentid}"
+                            "AND EXISTS("
+                                "SELECT 1 FROM Review AS selection "
+                                "WHERE selection.apartment_id = {apartmentid}"
+                                "AND selection.customer_id = {customerid}"
+                                "AND selection.date <= {reviewdate}").format(
+                        customerid=sql.Literal(customer_id),
+                        apartmentid=sql.Literal(apartment_id),
+                        reviewdate=sql.Literal(date),
+        )
+        rows_effected, _ = conn.execute(query)
+        if rows_effected == 1:
+            return ReturnValue.OK
+        if rows_effected == 0:
+            return ReturnValue.NOT_EXISTS
+    except DatabaseException.ConnectionInvalid as e:
+        return_value = ReturnValue.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.CHECK_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        return_value = ReturnValue.ALREADY_EXISTS
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        return_value = ReturnValue.NOT_EXISTS
+    finally:
+        # will happen any way after try termination or exception handling
+        if conn:
+            conn.close()
+        return return_value
     pass
 
 
