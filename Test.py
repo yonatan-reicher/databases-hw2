@@ -41,6 +41,11 @@ class Test(AbstractTest):
             date.fromisoformat('2021-01-10'),
             100,
         ))
+        self.assertEqual(ReturnValue.OK, Solution.delete_customer(1))
+        self.assertEqual(ReturnValue.NOT_EXISTS, Solution.customer_cancelled_reservation(
+            1, 1,
+            date.fromisoformat('2021-01-01'),
+        ))
 
 
 # *** DO NOT RUN EACH TEST MANUALLY ***
