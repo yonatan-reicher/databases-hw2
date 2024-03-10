@@ -36,8 +36,8 @@ def create_tables():
                 city        TEXT NOT NULL,
                 country     TEXT NOT NULL,
                 size        INTEGER NOT NULL,
-                CONSTRAINT positive_apartment_id CHECK (id >= 0)
-                CONSTRAINT positive_size CHECK (size > 0)
+                CONSTRAINT positive_apartment_id CHECK (id >= 0),
+                CONSTRAINT positive_size CHECK (size > 0),
                 CONSTRAINT unique_address UNIQUE (address, city, country)
             )
         """)
@@ -55,8 +55,8 @@ def create_tables():
                         start_date      DATE NOT NULL,      
                         end_date        DATE NOT NULL, 
                         price           INTEGER NOT NULL,
-                        PRIMARY KEY(apartment_id, costumer_id)
-                        CONSTRAINT positive_price CHECK (price > 0)
+                        PRIMARY KEY(apartment_id, customer_id),
+                        CONSTRAINT positive_price CHECK (price > 0),
                         CONSTRAINT legal_dates CHECK (start_date <= end_date) NOT VALID
                     )
                 """)
@@ -67,16 +67,15 @@ def create_tables():
                         date            DATE NOT NULL,      
                         rating          INTEGER NOT NULL,
                         review_text     TEXT NOT NULL,
-                        CONSTRAINT legal_rating CHECK (rating >= 1 and rating <= 10) NOT VALID
+                        CONSTRAINT legal_rating CHECK (rating >= 1 and rating <= 10) NOT VALID,
                         CONSTRAINT unique_review UNIQUE (customer_id, apartment_id)
                     )
                 """)
         conn.execute("""
                            CREATE MATERIALIZED VIEW OAP AS
                                SELECT A.owner_id, B.name, A.apartment_id, C.address, C.city, C.country, C.size
-                               FROM Owns A, Owner B, C Apartment
+                               FROM Owns A, Owner B, Apartment C
                                WHERE A.owner_id = B.id AND A.apartment_id = C.id
-                           )
                        """)
 
     except DatabaseException.ConnectionInvalid as e:
