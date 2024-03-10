@@ -156,8 +156,7 @@ def add_owner(owner: Owner) -> ReturnValue:
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
 
 
 def get_owner(owner_id: int) -> Owner:
@@ -174,7 +173,6 @@ def get_owner(owner_id: int) -> Owner:
     finally:
         if conn:
             conn.close()
-    pass
 
 def delete_owner(owner_id: int) -> ReturnValue:
     # for delete funcs, params value can and should be tested via python.
@@ -207,24 +205,25 @@ def delete_owner(owner_id: int) -> ReturnValue:
         if conn:
             conn.close()
         return_value = ReturnValue.OK
-    pass
+    return return_value
 
 
 def add_apartment(apartment: Apartment) -> ReturnValue:
     if not isinstance(apartment, Apartment):
         return ReturnValue.BAD_PARAMS
     conn = None
-    return_value = ReturnValue.OK
+    return_value = ReturnValue.ERROR
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("INSERT INTO Apartment(id, address, city, country, size) VALUES({apartmentid}, "
-                        "{apartmentaddress}), {apartmentcity}, {apartmentcountry}, {apartmentsize})").format(
+                        "{apartmentaddress}, {apartmentcity}, {apartmentcountry}, {apartmentsize})").format(
             apartmentid=sql.Literal(apartment.get_id()),
             apartmentaddress=sql.Literal(apartment.get_address()),
             apartmentcity=sql.Literal(apartment.get_city()),
             apartmentcountry=sql.Literal(apartment.get_country()),
             apartmentsize=sql.Literal(apartment.get_size()))
         rows_effected, _ = conn.execute(query)
+        return_value = ReturnValue.OK
 
     except DatabaseException.ConnectionInvalid as e:
         return_value = ReturnValue.ERROR
@@ -240,8 +239,7 @@ def add_apartment(apartment: Apartment) -> ReturnValue:
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
 
 
 def get_apartment(apartment_id: int) -> Apartment:
@@ -293,8 +291,7 @@ def delete_apartment(apartment_id: int) -> ReturnValue:
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
 
 
 def add_customer(customer: Customer) -> ReturnValue:
@@ -328,8 +325,7 @@ def add_customer(customer: Customer) -> ReturnValue:
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
 
 
 def get_customer(customer_id: int) -> Customer:
@@ -380,8 +376,7 @@ def delete_customer(customer_id: int) -> ReturnValue:
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
 
 
 def customer_made_reservation(customer_id: int, apartment_id: int, start_date: date, end_date: date,
@@ -393,12 +388,15 @@ def customer_made_reservation(customer_id: int, apartment_id: int, start_date: d
     return_value = ReturnValue.OK
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("INSERT INTO Reservasion(costumer_id, apartment_id, start_date, end_date, price) "
-                        "SELECT({customerid}, {apartmentid}, {startdate}, {enddate}, {apartmentprice})"
-                        "WHERE NOT EXISTS("
-                        "SELECT 1 FROM Reservasion AS selection "
-                        "WHERE selection.apartment_id = {apartmentid}"
-                        "AND (selection.start_date, selection.end_date) OVERLAPS (startdate, enddate)").format(
+        query = sql.SQL("""
+                INSERT INTO Reservation(customer_id, apartment_id, start_date, end_date, price)
+                SELECT {customerid}, {apartmentid}, {startdate}, {enddate}, {apartmentprice}
+                WHERE NOT EXISTS(
+                    SELECT 1 FROM Reservation AS selection
+                    WHERE selection.apartment_id = {apartmentid}
+                    AND (selection.start_date, selection.end_date) OVERLAPS ({startdate}, {enddate})
+                )
+            """).format(
             customerid=sql.Literal(customer_id),
             apartmentid=sql.Literal(apartment_id),
             startdate=sql.Literal(start_date),
@@ -424,8 +422,7 @@ def customer_made_reservation(customer_id: int, apartment_id: int, start_date: d
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
 
 
 def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_date: date) -> ReturnValue:
@@ -435,7 +432,7 @@ def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_da
     return_value = ReturnValue.OK
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("DELETE FROM Reservasion WHERE customer_id = {customerid} "
+        query = sql.SQL("DELETE FROM Reservation WHERE customer_id = {customerid} "
                         "AND apartment_id = {apartmentid} "
                         "AND start_date = {startdate}  ").format(
             customerid=sql.Literal(customer_id),
@@ -461,8 +458,7 @@ def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_da
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
 
 
 def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date: date, rating: int,
@@ -477,7 +473,7 @@ def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date
         query = sql.SQL("INSERT INTO Review(costumer_id, apartment_id, date, rading, review_text) "
                         "SELECT({customerid}, {apartmentid}, {reviewdate}, {rating}, {reviewtext})"
                         "WHERE EXISTS("
-                        "SELECT 1 FROM Reservasion AS selection "
+                        "SELECT 1 FROM Reservation AS selection "
                         "WHERE selection.apartment_id = {apartmentid}"
                         "AND selection.customer_id = {customerid}"
                         "AND selection.end_date <= {reviewdate}").format(
@@ -504,8 +500,7 @@ def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
 
 
 def customer_updated_review(customer_id: int, apartment_id: int, update_date: date, new_rating: int,
@@ -552,8 +547,7 @@ def customer_updated_review(customer_id: int, apartment_id: int, update_date: da
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
 
 
 def owner_owns_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
@@ -585,8 +579,8 @@ def owner_owns_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
+
 
 def owner_drops_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
     if not isinstance(owner_id, int) or not isinstance(apartment_id, int):
@@ -619,8 +613,8 @@ def owner_drops_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return return_value
-    pass
+    return return_value
+
 
 #TODO: check that the view used here is indeed working
 def get_apartment_owner(apartment_id: int) -> Owner:
@@ -642,7 +636,7 @@ def get_apartment_owner(apartment_id: int) -> Owner:
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-    pass
+
 
 #TODO: check that the view used here is indeed working
 def get_owner_apartments(owner_id: int) -> List[Apartment]:
@@ -664,8 +658,7 @@ def get_owner_apartments(owner_id: int) -> List[Apartment]:
         # will happen any way after try termination or exception handling
         if conn:
             conn.close()
-        return query_result
-    pass
+    return query_result
 
 
 # ---------------------------------- BASIC API: ----------------------------------
