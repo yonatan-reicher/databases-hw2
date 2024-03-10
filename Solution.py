@@ -77,6 +77,20 @@ def create_tables():
                                FROM Owns A, Owner B, Apartment C
                                WHERE A.owner_id = B.id AND A.apartment_id = C.id
                        """)
+        # Create an average rating view for use with get_apartment_rating, get_owner_rating
+        # Note: How do apartments with no reviews get an average rating of 0?
+        #       We use a join
+        conn.execute("""
+            CREATE VIEW AverageApartmentRating AS
+            SELECT apartment_id, average_rating
+            FROM (
+                SELECT apartment_id, AVG(rating) AS average_rating FROM Review
+                GROUP BY apartment_id
+                UNION ALL
+                SELECT id AS apartment_id, 0 FROM Apartment
+                WHERE id NOT IN (SELECT apartment_id FROM Review)
+            )
+        """)
 
     except DatabaseException.ConnectionInvalid as e:
         print(e)
@@ -664,13 +678,39 @@ def get_owner_apartments(owner_id: int) -> List[Apartment]:
 # ---------------------------------- BASIC API: ----------------------------------
 
 def get_apartment_rating(apartment_id: int) -> float:
-    # TODO: implement
-    pass
+    if not isinstance(apartment_id, int):
+        return 0
+
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("""
+            SELECT average_rating
+            FROM AverageApartmentRating
+            WHERE apartment_id = {apartment_id}
+        """).format(apartment_id=sql.Literal(apartment_id))
+        _, result = conn.execute(query)
+        return result[0] if result is not None else 0
+    finally:
+        if conn: conn.close()
 
 
 def get_owner_rating(owner_id: int) -> float:
-    # TODO: implement
-    pass
+    if not isinstance(owner_id, int):
+        return 0
+
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("""
+            SELECT AVG(average_rating)
+            FROM AverageApartmentRating, Owns
+            WHERE owner_id = {owner_id}
+        """).format(owner_id=sql.Literal(owner_id))
+        _, result = conn.execute(query)
+        return result[0] if result is not None else 0
+    finally:
+        if conn: conn.close()
 
 
 def get_top_customer() -> Customer:
