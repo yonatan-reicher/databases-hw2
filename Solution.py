@@ -95,14 +95,38 @@ def create_tables():
         if conn: conn.close()
 
 
+tables = [
+    'Owner',
+    'Customer',
+    'Apartment',
+    'Owns',
+    'Reservation',
+    'Review',
+]
+
+
 def clear_tables():
-    # TODO: implement
-    pass
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        for table in tables:
+            conn.execute(f"DELETE FROM {table}")
+    except Exception as e:
+        print(e)
+    finally:
+        if conn: conn.close()
 
 
 def drop_tables():
-    # TODO: implement
-    pass
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        for table in tables:
+            conn.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
+    except Exception as e:
+        print(e)
+    finally:
+        if conn: conn.close()
 
 
 def add_owner(owner: Owner) -> ReturnValue:
