@@ -484,16 +484,21 @@ def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date
     return_value = ReturnValue.OK
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("INSERT INTO Review(costumer_id, apartment_id, date, rading, review_text) "
-                        "SELECT({customerid}, {apartmentid}, {reviewdate}, {rating}, {reviewtext})"
-                        "WHERE EXISTS("
-                        "SELECT 1 FROM Reservation AS selection "
-                        "WHERE selection.apartment_id = {apartmentid}"
-                        "AND selection.customer_id = {customerid}"
-                        "AND selection.end_date <= {reviewdate}").format(
+        query = sql.SQL("""
+                INSERT INTO Review(customer_id, apartment_id, date, rating, review_text) 
+                SELECT {customerid}, {apartmentid}, {reviewdate}, {rating}, {reviewtext}
+                WHERE EXISTS(
+                    SELECT 1 FROM Reservation AS selection 
+                    WHERE selection.apartment_id = {apartmentid}
+                    AND selection.customer_id = {customerid}
+                    AND selection.end_date <= {reviewdate}
+                )
+            """).format(
             customerid=sql.Literal(customer_id),
             apartmentid=sql.Literal(apartment_id),
             reviewdate=sql.Literal(review_date),
+            rating=sql.Literal(rating),
+            reviewtext=sql.Literal(review_text)
         )
         rows_effected, _ = conn.execute(query)
         if rows_effected == 1:
@@ -528,19 +533,23 @@ def customer_updated_review(customer_id: int, apartment_id: int, update_date: da
     #TODO: USE VIEW HERE
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("UPDATE Review "
-                        "SET date = {reviewdate}, rating = {reviewrating}, review_text = {reviewtext}"
-                        "WHERE("
-                            "customer_id = {customerid}"
-                            "AND apartment_id = {apartmentid}"
-                            "AND EXISTS("
-                                "SELECT 1 FROM Review AS selection "
-                                "WHERE selection.apartment_id = {apartmentid}"
-                                "AND selection.customer_id = {customerid}"
-                                "AND selection.date <= {reviewdate}").format(
-                        customerid=sql.Literal(customer_id),
-                        apartmentid=sql.Literal(apartment_id),
-                        reviewdate=sql.Literal(date),
+        query = sql.SQL("""
+            UPDATE Review 
+            SET date = {reviewdate}, rating = {reviewrating}, review_text = {reviewtext}
+            WHERE(
+                customer_id = {customerid}
+                AND apartment_id = {apartmentid}
+                AND EXISTS(
+                    SELECT 1 FROM Review AS selection 
+                    WHERE selection.apartment_id = {apartmentid}
+                    AND selection.customer_id = {customerid}
+                    AND selection.date <= {reviewdate}
+                )
+            )
+        """).format(
+            customerid=sql.Literal(customer_id),
+            apartmentid=sql.Literal(apartment_id),
+            reviewdate=sql.Literal(date),
         )
         rows_effected, _ = conn.execute(query)
         if rows_effected == 1:
