@@ -699,7 +699,7 @@ def get_apartment_rating(apartment_id: int) -> float:
             WHERE apartment_id = {apartment_id}
         """).format(apartment_id=sql.Literal(apartment_id))
         _, result = conn.execute(query)
-        return result[0] if result is not None else 0
+        return result[0]['average_rating'] if not result.isEmpty() else 0
     finally:
         if conn: conn.close()
 
@@ -712,24 +712,69 @@ def get_owner_rating(owner_id: int) -> float:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("""
-            SELECT AVG(average_rating)
+            SELECT COALESCE(AVG(average_rating), 0) AS average_rating
             FROM AverageApartmentRating, Owns
             WHERE owner_id = {owner_id}
+            AND AverageApartmentRating.apartment_id = Owns.apartment_id
         """).format(owner_id=sql.Literal(owner_id))
         _, result = conn.execute(query)
-        return result[0] if result is not None else 0
+        return result[0]['average_rating'] if not result.isEmpty() else 0
     finally:
         if conn: conn.close()
 
 
 def get_top_customer() -> Customer:
-    # TODO: implement
-    pass
+    conn = None
+    try:
+        # How do I construct a customer? From an id and name.
+        conn = Connector.DBConnector()
+        query = sql.SQL("""
+            SELECT customer_id, name
+            FROM Customer, (
+                SELECT customer_id, COUNT(*) AS reservations
+                FROM Reservation
+                GROUP BY customer_id
+                UNION ALL
+                SELECT id AS customer_id, 0
+                FROM Customer
+                WHERE id NOT IN (SELECT customer_id FROM Reservation)
+            ) as T
+            WHERE Customer.id = T.customer_id
+            ORDER BY reservations DESC, customer_id ASC
+            LIMIT 1
+        """).format()
+        _, result = conn.execute(query)
+        return Customer(result[0]['customer_id'], result[0]['name']) if not result.isEmpty() else Customer.bad_customer()
+    finally:
+        if conn: conn.close()
 
 
 def reservations_per_owner() -> List[Tuple[str, int]]:
-    # TODO: implement
-    pass
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("""
+            SELECT name, COUNT(*) AS reservations
+            FROM Owner, Owns, Reservation
+            WHERE Owner.id = Owns.owner_id
+            AND Owns.apartment_id = Reservation.apartment_id
+            GROUP BY name
+
+            UNION ALL
+
+            SELECT name, 0
+            FROM Owner
+            WHERE NOT EXISTS (
+                SELECT *
+                FROM Owns, Reservation
+                WHERE Owner.id = Owns.owner_id
+                AND Owns.apartment_id = Reservation.apartment_id
+            )
+        """).format()
+        _, result = conn.execute(query)
+        return list((row['name'], row['reservations']) for row in result)
+    finally:
+        if conn: conn.close()
 
 
 # ---------------------------------- ADVANCED API: ----------------------------------
