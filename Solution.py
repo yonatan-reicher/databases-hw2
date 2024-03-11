@@ -20,13 +20,13 @@ def create_tables():
         conn.execute("CREATE TABLE Owner("
                      "id INTEGER PRIMARY KEY,"
                      "name TEXT NOT NULL,"
-                     "CONSTRAINT positive_owner_id CHECK (id >= 0))"
+                     "CONSTRAINT positive_owner_id CHECK (id > 0))"
                      )
 
         conn.execute("CREATE TABLE Customer("
                      "id INTEGER PRIMARY KEY,"
                      "name TEXT NOT NULL,"
-                     "CONSTRAINT positive_customer_id CHECK (id >= 0))"
+                     "CONSTRAINT positive_customer_id CHECK (id > 0))"
                      )
 
         conn.execute("""
@@ -36,7 +36,7 @@ def create_tables():
                 city        TEXT NOT NULL,
                 country     TEXT NOT NULL,
                 size        INTEGER NOT NULL,
-                CONSTRAINT positive_apartment_id CHECK (id >= 0),
+                CONSTRAINT positive_apartment_id CHECK (id > 0),
                 CONSTRAINT positive_size CHECK (size > 0),
                 CONSTRAINT unique_address UNIQUE (address, city, country)
             )
@@ -178,8 +178,9 @@ def get_owner(owner_id: int) -> Owner:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("SELECT name FROM owner WHERE id = {ownerid}").format(ownerid=sql.Literal(owner_id))
-        rows_effected, owner_name = conn.execute(query)
-        if owner_name is not None:
+        rows_effected, result = conn.execute(query)
+        if not result.isEmpty():
+            owner_name = result[0]['name']
             return Owner(owner_id, owner_name)
         else:
             return Owner.bad_owner()
@@ -266,7 +267,13 @@ def get_apartment(apartment_id: int) -> Apartment:
             apartmentid=sql.Literal(apartment_id))
         rows_affected, result = conn.execute(query)
         if rows_affected != 0:
-            return Apartment(result[0], result[1], result[2], result[3], result[4])
+            return Apartment(
+                id=result[0]['id'],
+                address=result[0]['address'],
+                city=result[0]['city'],
+                country=result[0]['country'],
+                size=result[0]['size'],
+            )
         else:
             return Apartment.bad_apartment()
     finally:
@@ -283,7 +290,7 @@ def delete_apartment(apartment_id: int) -> ReturnValue:
     return_value = ReturnValue.OK
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("DELETE FROM Apartment WHERE id = {apartmentid}").format(ownerid=sql.Literal(apartment_id))
+        query = sql.SQL("DELETE FROM Apartment WHERE id = {apartmentid}").format(apartmentid=sql.Literal(apartment_id))
         rows_effected = conn.execute(query)
         if rows_effected != 0:
             # Apartment exists and deleted one or more times
@@ -349,8 +356,9 @@ def get_customer(customer_id: int) -> Customer:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("SELECT name FROM customer WHERE id = {customerid}").format(customerid=sql.Literal(customer_id))
-        rows_effected, customer_name = conn.execute(query)
-        if customer_name is not None:
+        rows_effected, result = conn.execute(query)
+        if not result.isEmpty():
+            customer_name = result[0]['name']
             return Customer(customer_id, customer_name)
         else:
             return Customer.bad_customer()
@@ -674,9 +682,15 @@ def get_owner_apartments(owner_id: int) -> List[Apartment]:
         rows_effected, result = conn.execute(query)
         if rows_effected == 0:
             return query_result
-        if result is not None:
+        if not result.isEmpty():
             for index in result:
-                query_result.append(Apartment(index[1], index[2], index[3], index[4], index[5]))
+                query_result.append(Apartment(
+                    index['apartment_id'],
+                    index['address'],
+                    index['city'],
+                    index['country'],
+                    index['size']
+                ))
     finally:
         # will happen any way after try termination or exception handling
         if conn:
