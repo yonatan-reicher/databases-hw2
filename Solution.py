@@ -97,14 +97,14 @@ def create_tables():
             )
         """)
         conn.execute("""
-            CREATE VIEW CustomerRatio AS
-            SELECT R1.customer_id AS id1,
-                   R2.customer_id AS id2,
-                   AVG(R1.rating) / AVG(R2.rating) AS ratio
-            FROM Review AS R1, Review AS R2
-            WHERE R1.customer_id != R2.customer_id
-            AND R1.apartment_id = R2.apartment_id
-            GROUP BY R1.customer_id, R2.customer_id
+                        CREATE VIEW CustomerRatio AS
+                        SELECT R1.customer_id AS id1,
+                               R2.customer_id AS id2,
+                               AVG(R1.rating / R2.rating::DECIMAL) AS ratio
+                        FROM Review AS R1
+                        JOIN Review AS R2 ON R1.apartment_id = R2.apartment_id
+                        WHERE R1.customer_id != R2.customer_id
+                        GROUP BY R1.customer_id, R2.customer_id
         """)
 
     except DatabaseException.ConnectionInvalid as e:
@@ -907,7 +907,7 @@ def get_apartment_recommendation(customer_id: int) -> List[Tuple[Apartment, floa
         conn = Connector.DBConnector()
         query = sql.SQL("""
             SELECT A.id AS apartment_id, address, city, country, size,
-                   AVG(ratio * R.rating) AS approx
+                   AVG(LEAST(GREATEST(ratio * R.rating, 1), 10)) AS approx
             FROM Apartment as A, CustomerRatio, Review as R
             WHERE A.id = R.apartment_id
             AND CustomerRatio.id1 = {customer_id}
@@ -920,9 +920,13 @@ def get_apartment_recommendation(customer_id: int) -> List[Tuple[Apartment, floa
             GROUP BY A.id, address, city, country, size
         """).format(customer_id=sql.Literal(customer_id))
         _, result = conn.execute(query)
-        return list(
-            (Apartment(row['apartment_id'], row['address'], row['city'], row['country'], row['size']), row['approx'])
+
+        ret_list = list(
+            (Apartment(row['apartment_id'], row['address'], row['city'], row['country'], row['size']), float(row['approx']))
             for row in result
         )
+        #sorting the list by apartment id to pass the student's test although it is not required(?)
+        sorted_list = sorted(ret_list, key=lambda x: x[0].get_id())
+        return sorted_list
     finally:
         if conn: conn.close()
