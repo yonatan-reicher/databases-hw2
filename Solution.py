@@ -55,7 +55,6 @@ def create_tables():
                         start_date      DATE NOT NULL,      
                         end_date        DATE NOT NULL, 
                         price           INTEGER NOT NULL,
-                        PRIMARY KEY(apartment_id, customer_id),
                         CONSTRAINT positive_price CHECK (price > 0),
                         CONSTRAINT legal_dates CHECK (start_date <= end_date) NOT VALID
                     )
@@ -267,13 +266,7 @@ def get_apartment(apartment_id: int) -> Apartment:
             apartmentid=sql.Literal(apartment_id))
         rows_affected, result = conn.execute(query)
         if rows_affected != 0:
-            return Apartment(
-                id=result[0]['id'],
-                address=result[0]['address'],
-                city=result[0]['city'],
-                country=result[0]['country'],
-                size=result[0]['size'],
-            )
+            return Apartment(result['id'][0], result['address'][0], result['city'][0], result['country'][0], result['size'][0])
         else:
             return Apartment.bad_apartment()
     finally:
