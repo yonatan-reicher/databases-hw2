@@ -71,10 +71,10 @@ def create_tables():
                     )
                 """)
         conn.execute("""
-                           CREATE MATERIALIZED VIEW OAP AS
-                               SELECT A.owner_id, B.name, A.apartment_id, C.address, C.city, C.country, C.size
-                               FROM Owns A, Owner B, Apartment C
-                               WHERE A.owner_id = B.id AND A.apartment_id = C.id
+                    CREATE VIEW OAP AS
+                        SELECT A.owner_id, B.name, A.apartment_id, C.address, C.city, C.country, C.size
+                        FROM Owns A, Owner B, Apartment C
+                        WHERE A.owner_id = B.id AND A.apartment_id = C.id
                        """)
         # Create an average rating view for use with get_apartment_rating, get_owner_rating
         # Note: How do apartments with no reviews get an average rating of 0?
@@ -617,7 +617,7 @@ def owner_drops_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM Owns "
                         "WHERE owner_id = {ownerid} "
-                        "AND apartment_id = {apartmentid})").format(
+                        "AND apartment_id = {apartmentid}").format(
                         ownerid=sql.Literal(owner_id),
                         apartmentid=sql.Literal(apartment_id))
         rows_effected, _ = conn.execute(query)
@@ -655,7 +655,7 @@ def get_apartment_owner(apartment_id: int) -> Owner:
         if rows_effected == 0:
             return Owner.bad_owner()
         if result is not None:
-            return Owner(result[0], result[1])
+            return Owner(result['owner_id'][0], result['name'][0])
         else:
             return Owner.bad_owner()
     finally:
