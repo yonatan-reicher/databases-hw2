@@ -198,7 +198,7 @@ def delete_owner(owner_id: int) -> ReturnValue:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM owner WHERE id = {ownerid}").format(ownerid=sql.Literal(owner_id))
-        rows_effected = conn.execute(query)
+        rows_effected, _ = conn.execute(query)
         if rows_effected != 0:
             # Owner exists and deleted one or more times
             return ReturnValue.OK
@@ -291,7 +291,7 @@ def delete_apartment(apartment_id: int) -> ReturnValue:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM Apartment WHERE id = {apartmentid}").format(apartmentid=sql.Literal(apartment_id))
-        rows_effected = conn.execute(query)
+        rows_effected, _ = conn.execute(query)
         if rows_effected != 0:
             # Apartment exists and deleted one or more times
             return ReturnValue.OK
@@ -377,7 +377,7 @@ def delete_customer(customer_id: int) -> ReturnValue:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM Customer WHERE id = {customerid}").format(customerid=sql.Literal(customer_id))
-        rows_effected = conn.execute(query)
+        rows_effected, _ = conn.execute(query)
         if rows_effected != 0:
             # Customer exists and deleted one or more times
             return ReturnValue.OK
