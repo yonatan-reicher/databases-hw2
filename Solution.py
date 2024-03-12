@@ -177,9 +177,9 @@ def get_owner(owner_id: int) -> Owner:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("SELECT name FROM owner WHERE id = {ownerid}").format(ownerid=sql.Literal(owner_id))
-        rows_effected, owner_name = conn.execute(query)
-        if owner_name is not None:
-            return Owner(owner_id, owner_name)
+        rows_effected, result = conn.execute(query)
+        if result is not None and rows_effected != 0:
+            return Owner(owner_id, result['name'][0])
         else:
             return Owner.bad_owner()
         # will happen any way after try termination or exception handling
@@ -189,14 +189,14 @@ def get_owner(owner_id: int) -> Owner:
 
 def delete_owner(owner_id: int) -> ReturnValue:
     # for delete funcs, params value can and should be tested via python.
-    if not isinstance(owner_id, int):
+    if not isinstance(owner_id, int) or owner_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM owner WHERE id = {ownerid}").format(ownerid=sql.Literal(owner_id))
-        rows_effected = conn.execute(query)
+        rows_effected, _ = conn.execute(query)
         if rows_effected != 0:
             # Owner exists and deleted one or more times
             return ReturnValue.OK
@@ -276,14 +276,14 @@ def get_apartment(apartment_id: int) -> Apartment:
 
 
 def delete_apartment(apartment_id: int) -> ReturnValue:
-    if not isinstance(apartment_id, int):
+    if not isinstance(apartment_id, int) or apartment_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("DELETE FROM Apartment WHERE id = {apartmentid}").format(ownerid=sql.Literal(apartment_id))
-        rows_effected = conn.execute(query)
+        query = sql.SQL("DELETE FROM Apartment WHERE id = {apartmentid}").format(apartmentid=sql.Literal(apartment_id))
+        rows_effected, _ = conn.execute(query)
         if rows_effected != 0:
             # Apartment exists and deleted one or more times
             return ReturnValue.OK
@@ -349,8 +349,8 @@ def get_customer(customer_id: int) -> Customer:
         conn = Connector.DBConnector()
         query = sql.SQL("SELECT name FROM customer WHERE id = {customerid}").format(customerid=sql.Literal(customer_id))
         rows_effected, customer_name = conn.execute(query)
-        if customer_name is not None:
-            return Customer(customer_id, customer_name)
+        if customer_name is not None and rows_effected != 0:
+            return Customer(customer_id, customer_name['name'][0])
         else:
             return Customer.bad_customer()
     finally:
@@ -361,14 +361,14 @@ def get_customer(customer_id: int) -> Customer:
 
 
 def delete_customer(customer_id: int) -> ReturnValue:
-    if not isinstance(customer_id, int):
+    if not isinstance(customer_id, int) or customer_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM Customer WHERE id = {customerid}").format(customerid=sql.Literal(customer_id))
-        rows_effected = conn.execute(query)
+        rows_effected, _ = conn.execute(query)
         if rows_effected != 0:
             # Customer exists and deleted one or more times
             return ReturnValue.OK
@@ -525,7 +525,7 @@ def customer_updated_review(customer_id: int, apartment_id: int, update_date: da
                             new_text: str) -> ReturnValue:
 
     if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(update_date, date)
-            or not isinstance(new_rating, int) or not isinstance(new_text, str)):
+            or not isinstance(new_rating, int) or not isinstance(new_text, str) or customer_id <=0 or apartment_id <=0):
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -573,7 +573,7 @@ def customer_updated_review(customer_id: int, apartment_id: int, update_date: da
 
 
 def owner_owns_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
-    if not isinstance(owner_id, int) or not isinstance(apartment_id, int):
+    if not isinstance(owner_id, int) or not isinstance(apartment_id, int) or owner_id <= 0 or apartment_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -596,7 +596,7 @@ def owner_owns_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
     except DatabaseException.UNIQUE_VIOLATION as e:
         return_value = ReturnValue.ALREADY_EXISTS
     except DatabaseException.FOREIGN_KEY_VIOLATION as e:
-        return_value = ReturnValue.BAD_PARAMS
+        return_value = ReturnValue.NOT_EXISTS
     finally:
         # will happen any way after try termination or exception handling
         if conn:
@@ -640,7 +640,7 @@ def owner_drops_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
 
 #TODO: check that the view used here is indeed working
 def get_apartment_owner(apartment_id: int) -> Owner:
-    if not isinstance(apartment_id, int):
+    if not isinstance(apartment_id, int) or apartment_id <= 0:
         return Owner.bad_owner()
     conn = None
     try:
@@ -648,10 +648,11 @@ def get_apartment_owner(apartment_id: int) -> Owner:
         query = sql.SQL("SELECT owner_id, name FROM OAP WHERE apartment_id = {apartmentid}").format(
                                                                 apartmentid=sql.Literal(apartment_id))
         rows_effected, result = conn.execute(query)
+        print(result)
         if rows_effected == 0:
             return Owner.bad_owner()
         if result is not None:
-            return Owner(result[0], result[1])
+            return Owner(result['id'][0], result['name'][0])
         else:
             return Owner.bad_owner()
     finally:
