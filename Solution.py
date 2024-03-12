@@ -190,7 +190,7 @@ def get_owner(owner_id: int) -> Owner:
 
 def delete_owner(owner_id: int) -> ReturnValue:
     # for delete funcs, params value can and should be tested via python.
-    if not isinstance(owner_id, int):
+    if not isinstance(owner_id, int) or owner_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -277,7 +277,7 @@ def get_apartment(apartment_id: int) -> Apartment:
 
 
 def delete_apartment(apartment_id: int) -> ReturnValue:
-    if not isinstance(apartment_id, int):
+    if not isinstance(apartment_id, int) or apartment_id <=0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -363,7 +363,7 @@ def get_customer(customer_id: int) -> Customer:
 
 
 def delete_customer(customer_id: int) -> ReturnValue:
-    if not isinstance(customer_id, int):
+    if not isinstance(customer_id, int) or customer_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -397,7 +397,7 @@ def delete_customer(customer_id: int) -> ReturnValue:
 def customer_made_reservation(customer_id: int, apartment_id: int, start_date: date, end_date: date,
                               total_price: float) -> ReturnValue:
     if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(start_date, date)
-            or not isinstance(end_date, date)):
+            or not isinstance(end_date, date) or customer_id <=0 or apartment_id <=0):
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -441,7 +441,7 @@ def customer_made_reservation(customer_id: int, apartment_id: int, start_date: d
 
 
 def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_date: date) -> ReturnValue:
-    if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(start_date, date)):
+    if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(start_date, date) or customer_id <= 0 or apartment_id <= 0):
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -479,7 +479,7 @@ def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_da
 def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date: date, rating: int,
                                 review_text: str) -> ReturnValue:
     if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(review_date, date)
-            or not isinstance(rating, int) or not isinstance(review_text, str)):
+            or not isinstance(rating, int) or not isinstance(review_text, str) or not customer_id <= 0 or apartment_id <= 0):
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -527,7 +527,7 @@ def customer_updated_review(customer_id: int, apartment_id: int, update_date: da
                             new_text: str) -> ReturnValue:
 
     if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(update_date, date)
-            or not isinstance(new_rating, int) or not isinstance(new_text, str)):
+            or not isinstance(new_rating, int) or not isinstance(new_text, str) or customer_id <= 0 or apartment_id <= 0):
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -575,7 +575,7 @@ def customer_updated_review(customer_id: int, apartment_id: int, update_date: da
 
 
 def owner_owns_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
-    if not isinstance(owner_id, int) or not isinstance(apartment_id, int):
+    if not isinstance(owner_id, int) or not isinstance(apartment_id, int) or owner_id <= 0 or apartment_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -607,7 +607,7 @@ def owner_owns_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
 
 
 def owner_drops_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
-    if not isinstance(owner_id, int) or not isinstance(apartment_id, int):
+    if not isinstance(owner_id, int) or not isinstance(apartment_id, int) or owner_id <= 0 or apartment_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
