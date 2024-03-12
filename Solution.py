@@ -45,6 +45,8 @@ def create_tables():
             CREATE TABLE Owns(
                 owner_id        INTEGER REFERENCES Owner(id) ON DELETE CASCADE,
                 apartment_id    INTEGER REFERENCES Apartment(id) ON DELETE CASCADE,
+                CONSTRAINT positive_owner_id CHECK (owner_id > 0),
+                CONSTRAINT positive_apartment_id CHECK (apartment_id > 0),
                 PRIMARY KEY(apartment_id)
             )
         """)
@@ -56,7 +58,9 @@ def create_tables():
                         end_date        DATE NOT NULL, 
                         price           INTEGER NOT NULL,
                         CONSTRAINT positive_price CHECK (price > 0),
-                        CONSTRAINT legal_dates CHECK (start_date <= end_date) NOT VALID
+                        CONSTRAINT positive_customer_id CHECK (customer_id > 0),
+                        CONSTRAINT positive_apartment_id CHECK (apartment_id > 0),
+                        CONSTRAINT legal_dates CHECK (start_date <= end_date)
                     )
                 """)
         conn.execute("""
@@ -66,8 +70,10 @@ def create_tables():
                         date            DATE NOT NULL,      
                         rating          INTEGER NOT NULL,
                         review_text     TEXT NOT NULL,
-                        CONSTRAINT legal_rating CHECK (rating >= 1 and rating <= 10) NOT VALID,
-                        CONSTRAINT unique_review UNIQUE (customer_id, apartment_id)
+                        CONSTRAINT positive_customer_id CHECK (customer_id > 0),
+                        CONSTRAINT positive_apartment_id CHECK (apartment_id > 0),
+                        CONSTRAINT unique_review UNIQUE (customer_id, apartment_id),
+                        CONSTRAINT legal_rating CHECK (rating >= 1 AND rating <= 10) 
                     )
                 """)
         conn.execute("""
@@ -193,6 +199,16 @@ def get_owner(owner_id: int) -> Owner:
             return Owner(owner_id, owner_name)
         else:
             return Owner.bad_owner()
+    except DatabaseException.ConnectionInvalid as e:
+        return Owner.bad_owner()
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        return Owner.bad_owner()
+    except DatabaseException.CHECK_VIOLATION as e:
+        return Owner.bad_owner()
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        return Owner.bad_owner()
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        return Owner.bad_owner()
         # will happen any way after try termination or exception handling
     finally:
         if conn:
@@ -200,7 +216,7 @@ def get_owner(owner_id: int) -> Owner:
 
 def delete_owner(owner_id: int) -> ReturnValue:
     # for delete funcs, params value can and should be tested via python.
-    if not isinstance(owner_id, int) or owner_id <= 0:
+    if owner_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -287,7 +303,7 @@ def get_apartment(apartment_id: int) -> Apartment:
 
 
 def delete_apartment(apartment_id: int) -> ReturnValue:
-    if not isinstance(apartment_id, int) or apartment_id <=0:
+    if apartment_id <=0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -373,7 +389,7 @@ def get_customer(customer_id: int) -> Customer:
 
 
 def delete_customer(customer_id: int) -> ReturnValue:
-    if not isinstance(customer_id, int) or customer_id <= 0:
+    if customer_id <= 0:
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -406,9 +422,9 @@ def delete_customer(customer_id: int) -> ReturnValue:
 
 def customer_made_reservation(customer_id: int, apartment_id: int, start_date: date, end_date: date,
                               total_price: float) -> ReturnValue:
-    if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(start_date, date)
-            or not isinstance(end_date, date) or customer_id <=0 or apartment_id <=0):
-        return ReturnValue.BAD_PARAMS
+    #if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(start_date, date)
+     #       or not isinstance(end_date, date) or customer_id <=0 or apartment_id <=0):
+    #    return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
     try:
@@ -451,7 +467,7 @@ def customer_made_reservation(customer_id: int, apartment_id: int, start_date: d
 
 
 def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_date: date) -> ReturnValue:
-    if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(start_date, date) or customer_id <= 0 or apartment_id <= 0):
+    if (customer_id <= 0 or apartment_id <= 0):
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -488,8 +504,7 @@ def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_da
 
 def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date: date, rating: int,
                                 review_text: str) -> ReturnValue:
-    if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(review_date, date)
-            or not isinstance(rating, int) or not isinstance(review_text, str) or customer_id <= 0 or apartment_id <= 0 or rating <=0 or rating >10):
+    if (customer_id <=0 or apartment_id <= 0 or rating <=0 or rating >10):
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -536,8 +551,7 @@ def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date
 def customer_updated_review(customer_id: int, apartment_id: int, update_date: date, new_rating: int,
                             new_text: str) -> ReturnValue:
 
-    if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(update_date, date)
-            or not isinstance(new_rating, int) or not isinstance(new_text, str) or customer_id <= 0 or apartment_id <= 0):
+    if (customer_id <= 0 or apartment_id <= 0):
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
