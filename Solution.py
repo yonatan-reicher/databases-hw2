@@ -90,6 +90,16 @@ def create_tables():
                 WHERE id NOT IN (SELECT apartment_id FROM Review)
             )
         """)
+        conn.execute("""
+            CREATE VIEW CustomerRatio AS
+            SELECT R1.customer_id AS id1,
+                   R2.customer_id AS id2,
+                   AVG(R1.rating) / AVG(R2.rating) AS ratio
+            FROM Review AS R1, Review AS R2
+            WHERE R1.customer_id != R2.customer_id
+            AND R1.apartment_id = R2.apartment_id
+            GROUP BY R1.customer_id, R2.customer_id
+        """)
 
     except DatabaseException.ConnectionInvalid as e:
         print(e)
@@ -789,20 +799,116 @@ def reservations_per_owner() -> List[Tuple[str, int]]:
 # ---------------------------------- ADVANCED API: ----------------------------------
 
 def get_all_location_owners() -> List[Owner]:
-    # TODO: implement
-    pass
+    # Owners that have apartments in all cities
+    # => Owners such that there is no city that owner doesn't have an apartment
+    #    in.
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("""
+            SELECT DISTINCT id, name
+            FROM Owner
+            WHERE NOT EXISTS (
+                SELECT * FROM Apartment as A
+                WHERE NOT EXISTS (
+                    SELECT * FROM Apartment as OwnerApartment, Owns
+                    WHERE Owner.id = Owns.owner_id
+                    AND OwnerApartment.id = Owns.apartment_id
+                    AND OwnerApartment.city = A.city
+                    AND OwnerApartment.country = A.country
+                )
+            )
+        """).format()
+        _, result = conn.execute(query)
+        return list(Owner(row['id'], row['name']) for row in result)
+    finally:
+        if conn: conn.close()
 
 
 def best_value_for_money() -> Apartment:
-    # TODO: implement
-    pass
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("""
+            SELECT Apartment.id AS id, address, city, country, size
+            FROM Apartment, AverageApartmentRating, (
+                SELECT 
+                    apartment_id,
+                    COALESCE(AVG(price / (end_date - start_date)), 0) AS avg_night_price
+                FROM Reservation
+                GROUP BY apartment_id
+            ) AS T
+            WHERE Apartment.id = AverageApartmentRating.apartment_id
+            AND Apartment.id = T.apartment_id
+            ORDER BY average_rating / avg_night_price DESC
+            LIMIT 1
+        """).format()
+        _, result = conn.execute(query)
+        return Apartment(
+            result[0]['id'],
+            result[0]['address'],
+            result[0]['city'],
+            result[0]['country'],
+            result[0]['size']
+        ) if not result.isEmpty() else Apartment.bad_apartment()
+    finally:
+        if conn: conn.close()
 
 
 def profit_per_month(year: int) -> List[Tuple[int, float]]:
-    # TODO: implement
-    pass
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("""
+            (
+                SELECT EXTRACT(MONTH FROM end_date) AS month, 0.15 * SUM(price) AS profit
+                FROM Reservation
+                WHERE EXTRACT(YEAR FROM end_date) = {year}
+                GROUP BY month
+                UNION ALL
+                SELECT month, 0
+                FROM generate_series(1, 12) AS month
+                WHERE month NOT IN (
+                    SELECT EXTRACT(MONTH FROM end_date) FROM Reservation
+                    WHERE EXTRACT(YEAR FROM end_date) = {year}
+                )
+            ) ORDER BY month
+        """).format(year=sql.Literal(year))
+        _, result = conn.execute(query)
+        return list((row['month'], row['profit']) for row in result)
+    finally:
+        if conn: conn.close()
 
 
 def get_apartment_recommendation(customer_id: int) -> List[Tuple[Apartment, float]]:
-    # TODO: implement
-    pass
+    # For every apartment:
+    #   For every other customer != customer:
+    #     our_apartments = customer apartments /\ other customer apartments
+    #     his_average_rating = average rating by other of our apartments
+    #     my_average_rating = average rating by customer of our apartments
+    #     approx = my_average_rating / his_average_rating * his_rating of apartment
+    #   approx = average of approxes
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("""
+            SELECT A.id AS apartment_id, address, city, country, size,
+                   AVG(ratio * R.rating) AS approx
+            FROM Apartment as A, CustomerRatio, Review as R
+            WHERE A.id = R.apartment_id
+            AND CustomerRatio.id1 = {customer_id}
+            AND CustomerRatio.id2 = R.customer_id
+            AND A.id NOT IN (
+                SELECT apartment_id
+                FROM Reservation
+                WHERE customer_id = {customer_id}
+            )
+            GROUP BY A.id, address, city, country, size
+        """).format(customer_id=sql.Literal(customer_id))
+        _, result = conn.execute(query)
+        return list(
+            (Apartment(row['apartment_id'], row['address'], row['city'], row['country'], row['size']), row['approx'])
+            for row in result
+        )
+    finally:
+        if conn: conn.close()

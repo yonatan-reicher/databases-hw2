@@ -47,6 +47,35 @@ class Test(AbstractTest):
             date.fromisoformat('2021-01-01'),
         ))
 
+    def test_get_apartment_recommendation(self):
+        c1 = Customer(1, 'c1')
+        c2 = Customer(2, 'c2')
+        a1 = Apartment(10, 'dizingof 10', 'tel aviv', 'ukrain', 100)
+        a2 = Apartment(20, 'dizingof 20', 'tel aviv', 'ukrain', 100)
+        d1 = date.fromisoformat('2021-01-01')
+        d2 = date.fromisoformat('2021-01-10')
+        d3 = date.fromisoformat('2021-01-20')
+        d4 = date.fromisoformat('2021-01-30')
+        self.assertEqual(Solution.get_apartment_recommendation(1), [])
+        self.assertEqual(Solution.get_apartment_recommendation(-1), [])
+        self.assertEqual(Solution.add_customer(c1), ReturnValue.OK)
+        self.assertEqual(Solution.add_customer(c2), ReturnValue.OK)
+        self.assertEqual(Solution.add_apartment(a1), ReturnValue.OK)
+        self.assertEqual(Solution.add_apartment(a2), ReturnValue.OK)
+        self.assertEqual(Solution.get_apartment_recommendation(1), [])
+        self.assertEqual(Solution.customer_made_reservation(2, 10, d1, d2, 100), ReturnValue.OK)
+        self.assertEqual(Solution.customer_reviewed_apartment(2, 10, d3, 5, 'good'), ReturnValue.OK)
+        self.assertEqual(Solution.customer_made_reservation(2, 20, d3, d4, 100), ReturnValue.OK)
+        self.assertEqual(Solution.customer_reviewed_apartment(2, 20, d4, 7, 'great'), ReturnValue.OK)
+        self.assertEqual(Solution.get_apartment_recommendation(1), [])
+        self.assertEqual(Solution.customer_made_reservation(1, 10, d3, d4, 100), ReturnValue.OK)
+        self.assertEqual(Solution.customer_reviewed_apartment(1, 10, d4, 3, 'good'), ReturnValue.OK)
+        self.assertEqual(Solution.get_apartment_recommendation(1)[0][0].get_id(), a2.get_id())
+        self.assertEqual(Solution.get_apartment_recommendation(1)[0][0].get_city(), a2.get_city())
+        self.assertEqual(Solution.get_apartment_recommendation(1)[0][0].get_size(), a2.get_size())
+        self.assertEqual(Solution.get_apartment_recommendation(1)[0][0].get_address(), a2.get_address())
+        self.assertEqual(Solution.get_apartment_recommendation(1), [(a2, 3 / 5 * 7)])
+
 
 # *** DO NOT RUN EACH TEST MANUALLY ***
 if __name__ == '__main__':
