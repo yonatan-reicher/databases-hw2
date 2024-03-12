@@ -479,7 +479,7 @@ def customer_cancelled_reservation(customer_id: int, apartment_id: int, start_da
 def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date: date, rating: int,
                                 review_text: str) -> ReturnValue:
     if (not isinstance(customer_id, int) or not isinstance(apartment_id, int) or not isinstance(review_date, date)
-            or not isinstance(rating, int) or not isinstance(review_text, str) or not customer_id <= 0 or apartment_id <= 0):
+            or not isinstance(rating, int) or not isinstance(review_text, str) or customer_id <= 0 or apartment_id <= 0 or rating <=0 or rating >10):
         return ReturnValue.BAD_PARAMS
     conn = None
     return_value = ReturnValue.OK
@@ -505,7 +505,7 @@ def customer_reviewed_apartment(customer_id: int, apartment_id: int, review_date
         if rows_effected == 1:
             return ReturnValue.OK
         if rows_effected == 0:
-            return ReturnValue.ALREADY_EXISTS
+            return ReturnValue.NOT_EXISTS
     except DatabaseException.ConnectionInvalid as e:
         return_value = ReturnValue.ERROR
     except DatabaseException.NOT_NULL_VIOLATION as e:
@@ -550,7 +550,9 @@ def customer_updated_review(customer_id: int, apartment_id: int, update_date: da
         """).format(
             customerid=sql.Literal(customer_id),
             apartmentid=sql.Literal(apartment_id),
-            reviewdate=sql.Literal(date),
+            reviewdate=sql.Literal(update_date),
+            reviewrating=sql.Literal(new_rating),
+            reviewtext=sql.Literal(new_text)
         )
         rows_effected, _ = conn.execute(query)
         if rows_effected == 1:
@@ -598,7 +600,7 @@ def owner_owns_apartment(owner_id: int, apartment_id: int) -> ReturnValue:
     except DatabaseException.UNIQUE_VIOLATION as e:
         return_value = ReturnValue.ALREADY_EXISTS
     except DatabaseException.FOREIGN_KEY_VIOLATION as e:
-        return_value = ReturnValue.BAD_PARAMS
+        return_value = ReturnValue.NOT_EXISTS
     finally:
         # will happen any way after try termination or exception handling
         if conn:
