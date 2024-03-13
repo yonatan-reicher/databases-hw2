@@ -72,7 +72,7 @@ def create_tables():
                         review_text     TEXT NOT NULL,
                         CONSTRAINT positive_customer_id CHECK (customer_id > 0),
                         CONSTRAINT positive_apartment_id CHECK (apartment_id > 0),
-                        CONSTRAINT unique_review UNIQUE (customer_id, apartment_id),
+                        PRIMARY KEY (customer_id, apartment_id),
                         CONSTRAINT legal_rating CHECK (rating >= 1 AND rating <= 10) 
                     )
                 """)
@@ -825,11 +825,10 @@ def get_all_location_owners() -> List[Owner]:
             WHERE NOT EXISTS (
                 SELECT * FROM Apartment as A
                 WHERE NOT EXISTS (
-                    SELECT * FROM Apartment as OwnerApartment, Owns
-                    WHERE Owner.id = Owns.owner_id
-                    AND OwnerApartment.id = Owns.apartment_id
-                    AND OwnerApartment.city = A.city
-                    AND OwnerApartment.country = A.country
+                    SELECT * FROM OAP
+                    WHERE OAP.city = A.city
+                    AND OAP.country = A.country
+                    AND OAP.owner_id = Owner.id
                 )
             )
         """).format()

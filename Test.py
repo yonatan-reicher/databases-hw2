@@ -76,6 +76,19 @@ class Test(AbstractTest):
         self.assertEqual(Solution.get_apartment_recommendation(1)[0][0].get_address(), a2.get_address())
         self.assertEqual(Solution.get_apartment_recommendation(1), [(a2, 3 / 5 * 7)])
 
+    def test_two_reviews_by_same_customer(self):
+        c1 = Customer(1, 'c1')
+        a1 = Apartment(10, 'dizingof 10', 'tel aviv', 'ukrain', 100)
+        d1 = date.fromisoformat('2021-01-01')
+        d2 = date.fromisoformat('2021-01-10')
+        d3 = date.fromisoformat('2021-01-20')
+        d4 = date.fromisoformat('2021-01-30')
+        self.assertEqual(Solution.add_customer(c1), ReturnValue.OK)
+        self.assertEqual(Solution.add_apartment(a1), ReturnValue.OK)
+        self.assertEqual(Solution.customer_made_reservation(1, 10, d1, d2, 100), ReturnValue.OK)
+        self.assertEqual(Solution.customer_reviewed_apartment(1, 10, d3, 5, 'good'), ReturnValue.OK)
+        self.assertEqual(Solution.customer_reviewed_apartment(1, 10, d4, 7, 'great'), ReturnValue.ALREADY_EXISTS)
+
 
 # *** DO NOT RUN EACH TEST MANUALLY ***
 if __name__ == '__main__':
