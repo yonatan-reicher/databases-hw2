@@ -918,15 +918,12 @@ def get_apartment_recommendation(customer_id: int) -> List[Tuple[Apartment, floa
                 WHERE customer_id = {customer_id}
             )
             GROUP BY A.id, address, city, country, size
+            ORDER BY A.id ASC
         """).format(customer_id=sql.Literal(customer_id))
         _, result = conn.execute(query)
-
-        ret_list = list(
+        return list(
             (Apartment(row['apartment_id'], row['address'], row['city'], row['country'], row['size']), float(row['approx']))
             for row in result
         )
-        #sorting the list by apartment id to pass the student's test although it is not required(?)
-        sorted_list = sorted(ret_list, key=lambda x: x[0].get_id())
-        return sorted_list
     finally:
         if conn: conn.close()
